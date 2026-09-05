@@ -1,0 +1,11 @@
+# Dependências
+node_modules/
+
+# Credenciais — nunca versionar
+.env
+firmware/secrets.h
+
+# Sistema
+.DS_Store
+Thumbs.db
+
