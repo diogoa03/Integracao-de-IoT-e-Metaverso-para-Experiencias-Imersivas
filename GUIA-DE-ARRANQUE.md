@@ -95,7 +95,9 @@ mosquitto -c mosquitto.conf -v
 No Windows, se o serviço estiver a correr, para-o primeiro em *Serviços* e corre o
 comando à mão para veres as mensagens.
 
-Depois preenche no firmware o `WIFI_SSID`, a `WIFI_PASS` e o `MQTT_HOST`, e recarrega.
+Depois copia `firmware/secrets.example.h` para `firmware/secrets.h`, preenche lá o
+SSID, a password e o `MQTT_HOST`, e recarrega. O `secrets.h` está no `.gitignore`:
+as credenciais nunca vão para o repositório.
 
 **Teste:** noutro terminal,
 

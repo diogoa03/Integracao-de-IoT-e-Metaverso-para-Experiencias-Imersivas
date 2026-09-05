@@ -83,8 +83,9 @@ npm install
 npm start                # http://localhost:3000
 ```
 
-**4. Firmware** — abrir `firmware/esp32_lab_node.ino`, preencher SSID, password e o IP
-do broker, e instalar as bibliotecas `PubSubClient`, `OneWire` e `DallasTemperature`.
+**4. Firmware** — copiar `firmware/secrets.example.h` para `firmware/secrets.h` e
+preencher SSID, password e o IP do broker. Depois abrir
+`firmware/esp32_lab_node.ino` e instalar as bibliotecas `PubSubClient`, `OneWire` e `DallasTemperature`.
 
 ## Ligações
 
