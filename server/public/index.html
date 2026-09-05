@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Laboratório Virtual — ISTEC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body data-mode="explore" data-locked="false">
+  <canvas id="scene"></canvas>
+
+  <!-- Modo de exploração -->
+  <div class="reticle" aria-hidden="true"></div>
+
+  <div class="keys" id="keys">
+    <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> andar</span>
+    <span><kbd>rato</kbd> olhar</span>
+    <span><kbd>E</kbd> interagir</span>
+  </div>
+
+  <div class="prompt" id="prompt" hidden>
+    <kbd>E</kbd><span id="prompt-action">Fazer experiência</span>
+  </div>
+
+  <div class="lock-hint" id="lock-hint">Clica no ecrã para andar pelo laboratório</div>
+
+  <!-- Modo de experiência -->
+  <section class="readout" aria-live="polite">
+    <div class="ph">
+      <span class="ph-value" id="ph-value">—</span>
+      <span class="origin" id="origin" data-kind="measured">medido pela sonda</span>
+    </div>
+
+    <div class="scale">
+      <div class="scale-strip" id="scale-strip"></div>
+      <div class="scale-marker" id="scale-marker"><span id="scale-marker-value">7.00</span></div>
+      <div class="scale-ticks"><span>0</span><span>7</span><span>14</span></div>
+    </div>
+
+    <dl class="metrics">
+      <div><dt>Leitura da sonda</dt><dd id="measured-value">—</dd></div>
+      <div><dt>Temperatura do ar</dt><dd id="temp-value">—</dd></div>
+      <div><dt>Humidade relativa</dt><dd id="hum-value">—</dd></div>
+      <div><dt>Pressão atmosférica</dt><dd id="pres-value">—</dd></div>
+      <div><dt>Tensão da sonda</dt><dd id="mv-value">—</dd></div>
+    </dl>
+  </section>
+
+  <aside class="panel">
+    <button id="leave" class="leave"><kbd>Esc</kbd> Voltar ao laboratório</button>
+
+    <div class="field">
+      <label for="sample">Líquido no copo</label>
+      <select id="sample"></select>
+    </div>
+
+    <div class="field">
+      <label for="volume">Volume da amostra</label>
+      <div class="inline">
+        <input id="volume" type="number" min="10" max="500" step="10" value="100" />
+        <span class="unit">mL</span>
+      </div>
+    </div>
+
+    <button id="anchor" class="btn btn--primary">Começar com a leitura atual</button>
+    <button id="stirrer-toggle" class="btn">Ligar / desligar atuador</button>
+    <button id="calibrate" class="btn" data-visible="false">Calibrar ponto neutro</button>
+
+    <div class="reagents" id="reagents" hidden>
+      <p class="reagents-title">Adicionar reagente <span class="sim-tag">simulado</span></p>
+      <div class="reagent-grid" id="reagent-grid"></div>
+      <dl class="metrics metrics--tight">
+        <div><dt>Volume adicionado</dt><dd id="added-value">0,0 mL</dd></div>
+      </dl>
+      <button id="reset" class="btn">Recomeçar a experiência</button>
+    </div>
+
+    <p class="hint" id="hint">Mergulha a sonda no líquido, espera a leitura estabilizar e ancora a experiência nesse valor.</p>
+  </aside>
+
+  <section class="curve" id="curve-box" hidden>
+    <div class="curve-head">
+      <span>Curva de titulação</span>
+      <span class="curve-axis">pH vs mL adicionados</span>
+    </div>
+    <canvas id="curve" width="620" height="180"></canvas>
+  </section>
+
+  <!-- Painel de latência: recolhido por omissão, para não estorvar a
+       exploração, mas acessível a qualquer momento. -->
+  <section class="latency" id="latency" data-visible="false" data-open="true">
+    <button class="lat-toggle" id="lat-toggle">
+      <span>Latência</span>
+      <span class="lat-caret">▾</span>
+    </button>
+
+    <div class="lat-body">
+      <div class="lat-metric" id="lat-uplink" data-state="empty">
+        <span class="lat-label">sensor → ecrã</span>
+        <span class="lat-value" id="lat-uplink-value">—</span>
+        <span class="lat-detail" id="lat-uplink-detail">sem amostras</span>
+      </div>
+
+      <div class="lat-metric" id="lat-downlink" data-state="empty">
+        <span class="lat-label">clique → hardware</span>
+        <span class="lat-value" id="lat-downlink-value">—</span>
+        <span class="lat-detail" id="lat-downlink-detail">sem amostras</span>
+      </div>
+
+      <div class="lat-actions">
+        <button class="btn" id="lat-probe">Medir 30 comandos</button>
+        <div class="lat-row">
+          <button class="btn" id="lat-export">Exportar CSV</button>
+          <button class="btn" id="lat-reset">Limpar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="status" id="status" data-state="offline">
+    <i></i><span id="status-text">à espera do dispositivo</span>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+  <div class="fatal" id="fatal" hidden></div>
+
+  <!-- Antes dos módulos: os imports ES são avaliados antes do corpo do
+       script, por isso um handler declarado dentro do módulo nunca
+       apanharia um erro na carga de um dos seus próprios imports. -->
+  <script>
+    addEventListener('error', (e) => {
+      const box = document.getElementById('fatal');
+      if (!box) return;
+      box.hidden = false;
+      box.textContent = `Erro: ${e.message} (${e.filename?.split('/').pop()}:${e.lineno})`;
+    });
+  </script>
+
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

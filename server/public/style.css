@@ -1,0 +1,372 @@
+:root {
+  --bench: #0e1418;
+  --panel: rgba(18, 26, 31, 0.84);
+  --edge: rgba(160, 200, 210, 0.16);
+  --edge-hi: rgba(160, 200, 210, 0.34);
+  --glass: #bfe9e4;
+  --ink: #e9f1f3;
+  --muted: #7d8f97;
+  --live: #4cd08a;
+  --dead: #8b6a6a;
+  --sim: #c9a227;
+
+  --font-ui: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+
+/* O atributo hidden tem de vencer os display: flex das regras de classe,
+   senão elementos escondidos por JavaScript continuam à vista. */
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bench);
+  color: var(--ink);
+  font-family: var(--font-ui);
+}
+
+#scene { position: fixed; inset: 0; width: 100%; height: 100%; outline: none; touch-action: none; }
+
+/* Estado da ligação, isolado no canto superior direito */
+.status {
+  position: fixed; top: 22px; right: 22px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--muted);
+  pointer-events: none;
+}
+
+.status i {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--dead);
+}
+
+.status[data-state="online"] i {
+  background: var(--live);
+  box-shadow: 0 0 0 3px rgba(76, 208, 138, 0.16);
+}
+
+.status[data-state="online"] { color: var(--ink); }
+
+/* Sai de cena quando o painel de latência ocupa o mesmo canto. */
+.latency[data-visible="true"] ~ .status { display: none; }
+
+/* ---------- Painéis ---------- */
+.readout, .panel, .curve {
+  position: fixed;
+  background: var(--panel);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+}
+
+.readout { left: 22px; bottom: 22px; width: 320px; padding: 20px; }
+
+.ph { display: flex; flex-direction: column; gap: 6px; }
+
+.ph-value {
+  font-family: var(--font-mono);
+  font-size: 50px; font-weight: 400; line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transition: color 240ms ease;
+}
+
+/* A proveniência do valor é parte da leitura, não uma nota de rodapé. */
+.origin {
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  display: inline-flex; align-items: center; gap: 6px; width: fit-content;
+  color: var(--muted);
+}
+
+.origin::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--live);
+}
+
+.origin[data-kind="simulated"] { color: var(--sim); }
+.origin[data-kind="simulated"]::before { background: var(--sim); border-radius: 1px; transform: rotate(45deg); }
+
+.scale { position: relative; margin: 22px 0 26px; }
+.scale-strip { height: 6px; border-radius: 3px; }
+
+.scale-marker {
+  position: absolute; top: -5px; left: 50%;
+  width: 2px; height: 16px; background: var(--ink);
+  transform: translateX(-1px);
+  transition: left 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.scale-marker span {
+  position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--muted); font-variant-numeric: tabular-nums;
+}
+
+.scale-ticks {
+  display: flex; justify-content: space-between; margin-top: 9px;
+  font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+}
+
+.metrics { display: grid; gap: 11px; margin: 0; }
+.metrics--tight { gap: 7px; margin: 12px 0; }
+.metrics > div { display: flex; justify-content: space-between; align-items: baseline; }
+.metrics dt { font-size: 12px; color: var(--muted); }
+.metrics dd {
+  margin: 0; font-family: var(--font-mono);
+  font-size: 13px; font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Painel da experiência ---------- */
+.panel { right: 22px; bottom: 22px; width: 268px; padding: 18px; }
+
+.field { margin-bottom: 13px; }
+.field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+
+.field select, .field input {
+  width: 100%; padding: 8px 10px;
+  background: rgba(10, 15, 18, 0.7);
+  border: 1px solid var(--edge); border-radius: 3px;
+  color: var(--ink); font-family: var(--font-mono); font-size: 13px;
+}
+
+.field select:focus-visible, .field input:focus-visible, .btn:focus-visible, .dose:focus-visible {
+  outline: 2px solid var(--glass); outline-offset: 2px;
+}
+
+.inline { display: flex; align-items: center; gap: 8px; }
+.inline input { flex: 1; }
+.unit { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+.btn {
+  width: 100%; padding: 10px 12px;
+  background: transparent; border: 1px solid var(--edge); border-radius: 3px;
+  color: var(--ink); font-family: inherit; font-size: 13px; cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.btn:hover { border-color: var(--edge-hi); }
+.btn--primary { border-color: rgba(76, 208, 138, 0.5); background: rgba(76, 208, 138, 0.1); }
+.btn--primary:hover { border-color: var(--live); }
+
+.reagents { margin-top: 16px; padding-top: 15px; border-top: 1px solid var(--edge); }
+
+.reagents-title {
+  margin: 0 0 11px; font-size: 12px; color: var(--muted);
+  display: flex; align-items: center; gap: 7px;
+}
+
+.sim-tag {
+  font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--sim); border: 1px solid rgba(201, 162, 39, 0.4);
+  border-radius: 2px; padding: 1px 5px;
+}
+
+.reagent-grid { display: grid; gap: 11px; }
+.reagent-name { font-family: var(--font-mono); font-size: 12px; }
+.reagent-name em { color: var(--muted); font-style: normal; font-size: 11px; }
+
+.dose-row { display: flex; gap: 5px; margin-top: 5px; }
+
+.dose {
+  flex: 1; padding: 7px 0;
+  background: rgba(10, 15, 18, 0.7);
+  border: 1px solid var(--edge); border-radius: 3px;
+  color: var(--ink); font-family: var(--font-mono); font-size: 12px;
+  cursor: pointer; transition: border-color 160ms ease;
+}
+
+.dose:hover { border-color: var(--edge-hi); }
+
+.hint { margin: 13px 0 0; font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+/* ---------- Curva ---------- */
+.curve { left: 50%; bottom: 22px; transform: translateX(-50%); padding: 14px 16px 8px; }
+
+.curve-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 8px; font-size: 12px;
+}
+
+.curve-axis { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+.curve canvas { display: block; }
+
+/* ---------- Aviso momentâneo ---------- */
+.toast {
+  position: fixed; top: 22px; left: 50%;
+  transform: translate(-50%, -8px);
+  padding: 9px 15px;
+  background: var(--panel); border: 1px solid var(--edge); border-radius: 3px;
+  font-size: 12px; opacity: 0; pointer-events: none;
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.toast[data-show="true"] { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------- Modos ---------- */
+/* A interface troca inteira conforme se anda pela sala ou se está numa bancada. */
+body[data-mode="explore"] .readout,
+body[data-mode="explore"] .panel,
+body[data-mode="explore"] .curve { display: none; }
+
+body[data-mode="experiment"] .reticle,
+body[data-mode="experiment"] .keys,
+body[data-mode="experiment"] .prompt,
+body[data-mode="experiment"] .lock-hint { display: none; }
+
+body[data-locked="true"] .lock-hint { display: none; }
+
+/* Mira */
+.reticle {
+  position: fixed; top: 50%; left: 50%;
+  width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: rgba(233, 241, 243, 0.75);
+  box-shadow: 0 0 0 1px rgba(14, 20, 24, 0.6);
+  pointer-events: none;
+}
+
+/* Teclas de comando */
+.keys {
+  position: fixed; left: 22px; bottom: 22px;
+  display: flex; gap: 18px;
+  font-size: 12px; color: var(--muted);
+  pointer-events: none;
+}
+
+.keys span { display: flex; align-items: center; gap: 6px; }
+
+kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px; height: 20px; padding: 0 5px;
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--ink);
+  background: rgba(18, 26, 31, 0.9);
+  border: 1px solid var(--edge);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+}
+
+/* Convite a interagir, junto à mira */
+.prompt {
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, 26px);
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 14px;
+  background: var(--panel); backdrop-filter: blur(12px);
+  border: 1px solid var(--edge-hi); border-radius: 4px;
+  font-size: 13px; white-space: nowrap;
+  pointer-events: none;
+}
+
+.lock-hint {
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -46px);
+  padding: 8px 14px;
+  background: var(--panel); backdrop-filter: blur(12px);
+  border: 1px solid var(--edge); border-radius: 4px;
+  font-size: 12px; color: var(--muted); white-space: nowrap;
+  pointer-events: none;
+}
+
+.leave {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; margin-bottom: 15px; padding: 8px 10px;
+  background: transparent; border: 1px solid var(--edge); border-radius: 3px;
+  color: var(--muted); font-family: inherit; font-size: 12px;
+  cursor: pointer; transition: color 160ms ease, border-color 160ms ease;
+}
+
+.leave:hover { color: var(--ink); border-color: var(--edge-hi); }
+
+@media (max-width: 1180px) {
+  .curve { display: none; }
+}
+
+@media (max-width: 900px) {
+  .readout, .panel { width: calc(100vw - 28px); max-width: 340px; }
+  .readout { bottom: auto; top: 62px; }
+  .keys { flex-direction: column; gap: 7px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.01ms !important; }
+}
+
+/* Erros de arranque à vista, em vez de um ecrã preto silencioso */
+.fatal {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  max-width: 560px; padding: 16px 20px;
+  background: rgba(40, 18, 18, 0.95);
+  border: 1px solid rgba(200, 90, 90, 0.5); border-radius: 4px;
+  font-family: var(--font-mono); font-size: 12px; line-height: 1.6;
+  color: #f0d5d5; z-index: 100;
+}
+
+/* ---------- Painel de latência ---------- */
+/* Escondido por omissão: é uma ferramenta de diagnóstico, não parte da
+   experiência. Revelado com Ctrl+Shift+L. */
+.latency { display: none; }
+
+.latency[data-visible="true"] {
+  display: block;
+  position: fixed; top: 22px; right: 22px; width: 232px;
+  background: var(--panel); backdrop-filter: blur(12px);
+  border: 1px solid var(--edge); border-radius: 4px;
+  overflow: hidden;
+}
+
+.lat-toggle {
+  display: flex; justify-content: space-between; align-items: center;
+  width: 100%; padding: 11px 14px;
+  background: transparent; border: none;
+  color: var(--ink); font-family: inherit; font-size: 12px;
+  cursor: pointer;
+}
+
+.lat-caret { color: var(--muted); transition: transform 180ms ease; }
+.latency[data-open="true"] .lat-caret { transform: rotate(180deg); }
+
+.lat-body { display: none; padding: 0 14px 14px; }
+.latency[data-open="true"] .lat-body { display: block; }
+
+.lat-metric {
+  display: grid; gap: 2px;
+  padding: 10px 0; border-top: 1px solid var(--edge);
+}
+
+.lat-label {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.06em; color: var(--muted);
+}
+
+.lat-value {
+  font-family: var(--font-mono); font-size: 23px;
+  font-weight: 400; font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+/* Verde abaixo dos 150 ms do objetivo 4, âmbar acima. */
+.lat-metric[data-state="good"] .lat-value { color: var(--live); }
+.lat-metric[data-state="over"] .lat-value { color: var(--sim); }
+.lat-metric[data-state="empty"] .lat-value { color: var(--muted); }
+
+.lat-detail {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--muted);
+}
+
+.lat-actions { display: grid; gap: 7px; margin-top: 12px; }
+.lat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.lat-actions .btn { padding: 7px 8px; font-size: 11px; }
+
+body[data-mode="experiment"] .latency { display: none; }
+
+/* Calibração escondida por omissão: é um procedimento de manutenção, não
+   uma ação do aluno. Revelada com Ctrl+Shift+C. */
+#calibrate { display: none; }
+#calibrate[data-visible="true"] { display: block; }
